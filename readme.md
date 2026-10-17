@@ -21,4 +21,4 @@ In scope:
 - Persistent vector store, so a restart does not re-embed
 - One FastAPI endpoint: `POST /ask`
 
-Out of scope: multiple documents, a UI, auth, reranking, hybrid search. Those come in later rungs.
+## Learnings:
