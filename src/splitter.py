@@ -22,6 +22,7 @@ def split_documents_recursive(documents: list[Document], chunk_size: int = 1000,
     for doc in documents:
         # Split the document into chunks
         chunks: list[str] = text_splitter.split_text(doc.page_content)
+
         
         # Create new Document objects for each chunk with the same metadata as the original document with an additonal 
         # metadata field "chunk_index" to indicate the index of the chunk
@@ -46,13 +47,19 @@ def split_texts_semantic(documents: list[Document], embedding_model: HuggingFace
     split_docs: list[Document] = []
 
     for doc in documents:
-        # split the page content of the document into chunks which returns a list of plain strings
-        chunks: list[str] = text_splitter.split_text(doc.page_content)
+        # split the page into chunks, which returns a list of plain strings
+        raw_chunks: list[str] = text_splitter.split_text(doc.page_content)
+
+        # keep only chunks that have real text, so blank ones are never stored
+        chunks: list[str] = []
+        for c in raw_chunks:
+            if c.strip():  # check if the chunk is not empty or just whitespace
+                chunks.append(c)       
 
         for i, chunk in enumerate(chunks):
             new_document = Document(
                 page_content=chunk,
-                metatdata={**doc.metadata, "chunk_index": i}
+                metadata={**doc.metadata, "chunk_index": i}
             )
             split_docs.append(new_document)
 
