@@ -1,24 +1,42 @@
-# Project 1: Single-Document RAG Q&A
+# pdf-rag-qna
 
-Part of my 10-project RAG learning ladder. This is the first rung: the plain mechanics, end to end, on one PDF.
+Ask questions about a PDF and get answers grounded in it, with page numbers. Runs fully locally with no API keys.
 
-**Status:** in progress
+## What we did
 
-## What it does
+- Loaded the PDF page by page, split it into chunks, embedded them with bge-m3 and stored them in Chroma.
+- Built two stores to compare chunking: recursive (23 chunks) and semantic (39 chunks).
+- Retrieved the top 4 chunks for a question and answered from them only, using qwen3:8b through Ollama.
+- If the answer isn't in the chunks, the model says "I could not find this in the document."
+- Wrapped it in a FastAPI endpoint, `POST /ask`, which returns the answer and the source pages.
+- Tested on a fictional 8 page water handbook with 10 questions. The recursive store with qwen3:8b answered all 10 correctly, including one unanswerable question. Recursive also retrieved better than semantic.
 
-Ask natural-language questions about a single PDF and get an answer grounded in that document, with the page it came from. If the PDF does not contain the answer, it says so instead of guessing. Everything runs locally, with no API keys.
+## How to run
 
-## Pipeline
+Install the packages and pull the model:
 
-Load PDF, split into chunks, embed, store in Chroma, retrieve the top-k chunks for a question, generate an answer with a local LLM.
+```
+pip install -r requirements.txt
+ollama pull qwen3:8b
+```
 
-## Scope
+Start the API from the project root:
 
-In scope:
+```
+uvicorn api:app --app-dir src --port 8001
+```
 
-- One PDF at a time
-- Page numbers kept as sources
-- Persistent vector store, so a restart does not re-embed
-- One FastAPI endpoint: `POST /ask`
+Ask a question:
 
-## Learnings:
+```
+curl -X POST http://127.0.0.1:8001/ask -H "Content-Type: application/json" -d '{"question": "When is the Jal Chaupal held each month?"}'
+```
+
+## Limitations
+
+- The page header and footer are part of each page's text and add noise to retrieval.
+- Chunks can't cross a page boundary, so a paragraph that runs onto the next page is always cut.
+- Semantic chunking can drop context: one chunk lost the word "Karanpur" because of a cut between two sentences that both start with "It".
+- There is no score cutoff for abstaining, so it relies on the prompt alone.
+- The semantic store wasn't run through the model, only tested on retrieval.
+- Tested on one document and 10 questions.
